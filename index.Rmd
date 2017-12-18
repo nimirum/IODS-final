@@ -1,0 +1,171 @@
+---
+title: "IODS final project"
+author: "Milla Peltoniemi milla.peltoniemi@helsinki.fi"
+date: December 18, 2017
+output:
+  html_document:
+    theme: cosmo
+    toc: true
+    toc_depth: 2
+    fig_caption: true
+    fig_width: 6
+    fig_height: 4
+    code_folding: hide
+---
+
+
+# Abstract 
+
+Analysing the exam points in statistics students dataset with the idea that the high exam points could be explained with gender, age and attitude.
+
+[My github repository](https://github.com/nimirum/IODS-final)
+
+# Introduction  
+
+The data is [a study](http://www.helsinki.fi/~kvehkala/JYTmooc/JYTOPKYS2-meta.txt) from a course "Johdatus yhteiskuntatilastotieteeseen, syksy 2014" about learning and teaching statistics. The data has been modified before analysis and the [data wrangling can be found here](https://github.com/nimirum/IODS-final/blob/master/learning2014.R). 
+Data contains 183 individuals and it has 7 different variables
+
+1. Age      (in years) derived from the date of birth
+2. Gender:   Male = 1 or  Female = 2
+3. Deep is an combination of feelings with statisics (combination of 12 questions)
+4. Stra is an combination of learning strategics (combination of 8 questions)
+5. Surf is an combination of which things to concentrate on studies (combination of 12 questions)
+6. Points is total points (max of all)
+7. Attitude is a global attitude towards statistics
+
+The data structure
+```{r warning=FALSE, message=FALSE}
+library(ggplot2);library(dplyr)
+bluecolor <- "steelblue4"
+lrn14 <- read.csv('learning2014.csv',sep=',')
+str(lrn14)
+```
+
+At first I'll take a look at the ages of the students. The most common age seems to be around 18-26 and the mean is about 26 and median is 22.
+
+```{r}
+g1 <- ggplot(lrn14, aes(x = age))
+g1 + geom_bar() + ggtitle("Distribution of age")
+mean(lrn14$age)
+median(lrn14$age)
+```
+
+
+```{r}
+g1 <- ggplot(lrn14, aes(x = gender))
+g1 + geom_bar() + ggtitle("Distribution of females and males")
+```
+
+The exam points are mostly between 15 and 40. There is a also high spike on zero points, which is probably the exam points of people who didn't attend the exam.
+
+```{r}
+g1 <- ggplot(lrn14, aes(x = points))
+g1 + geom_bar() + ggtitle("Distribution of exam points")
+```
+
+I'm going to create binary variable for exam points that are the top 25% of the class. A look at the 4th quantile of the points shows that the limit for high points is 26 points. Therefore a student with points over 26 will have binary value  TRUE in high_points from the exam.
+
+```{r}
+quantile(lrn14$points)
+lrn14 <- mutate(lrn14, high_points = points >= 26)
+```
+
+Both genders have exam points that over the high_points limit (red dashed line). 
+
+```{r}
+g1 <- ggplot(lrn14, aes(x = age, y = points, col=gender)) + geom_point()
+g1 + ggtitle("Student exam points and age by gender") + geom_hline(yintercept=26,linetype="dashed", color = "red")
+```
+
+I'll also take a look at the age distibution between genders. Female students are younger on average than male students, which could originate from that men have to do a millitary service.
+
+```{r}
+g1 <- ggplot(lrn14, aes(x = gender, y = age, fill=gender))
+g1 + geom_boxplot() + ggtitle("Student age distribution by gender")
+```
+
+There seems to be some correlation with attitude and gender.
+
+```{r}
+g1 <- ggplot(lrn14, aes(x = gender, y = attitude, fill=gender))
+g1 + geom_boxplot() + ggtitle("Students gender and attitude")
+```
+
+Correlation with gender and high points might be possible too, but only a little bit.
+
+```{r}
+g1 <- ggplot(lrn14, aes(x = gender, y = points, fill=high_points))
+g1 + geom_boxplot() + ggtitle("Students gender and exam points")
+```
+
+# Logistic regression
+
+Hypothesis: people with high points in exam have high attitude towards statistics 
+
+Hypothesis 2: age and gender is related to high points in exam
+
+I'm going to test with logistic regression that are my hypotesis possible to predict from the data or not.
+
+```{r}
+model <- glm(high_points ~ gender+ attitude -1,  data = lrn14, family = "binomial")
+summary(model)
+```
+
+The students with high attitude points seem to correlate with high exam points because the coefficents are ***. 
+
+```{r}
+OR <- coef(model) %>% exp
+CI <- confint(model) %>% exp
+cbind(OR, CI)
+```
+
+```{r}
+probabilities <- predict(model, type = "response")
+
+hyp_test <- mutate(lrn14, probability = probabilities)
+hyp_test <- mutate(hyp_test, prediction = probabilities > 0.5)
+table(high_points = lrn14$high_points, prediction = probabilities > 0.5)
+
+table(high_points = lrn14$high_points, prediction = hyp_test$prediction) %>% prop.table()  %>% addmargins()
+
+loss_func <- function(class, prob) {
+  n_wrong <- abs(class - prob) > 0.5
+  mean(n_wrong)
+}
+
+loss_func(class = lrn14$high_points, prob = hyp_test$probability)
+
+```
+
+The prediction model predicts about 23% of the predictions are wrong. This can be seen on the plot below. The accuracy is quite high because most of the values are predicted as FALSE. Predicing TRUE values was harder to get right.
+
+```{r}
+g1 <- ggplot(lrn14, aes(x = age, y = points, col=hyp_test$prediction)) + geom_point()
+g1 + ggtitle("Prediction on high exam points") + geom_hline(yintercept=26,linetype="dashed", color = "red")
+```
+
+# K-means
+
+Let's see can we cluster the student data and find some sub groups.
+
+```{r}
+sub_lrn14 <- select(lrn14, one_of(c("attitude","points","age")))
+set.seed(-100055)
+km <-kmeans(sub_lrn14[], centers = 3)
+pairs(sub_lrn14, col = km$cluster)
+
+```
+
+```{r}
+g1 <- ggplot(lrn14, aes(x = age, y = points, col=km$cluster)) + geom_point()
+g1 + ggtitle("K-means clustering") + geom_hline(yintercept=26,linetype="dashed", color = "red")
+```
+
+Clustering leads in a compact group of young stundet with some varinace in the exam points. It also clusters the failing students with really low exam points and distinctly older students from the average age.
+
+# Conclusion
+
+The analysis showed people with high points in exam probably have high attitude towards statistics. If they on average scored high on exam and answered high on attitude questions, the predicting model got 77% right in predicting them.
+
+Second hypothesis about gender and age weren't that relevant but they had some effect if the person got high points in exam. On the other hand the amount of females is a lot higher than males, which probably has an effect on the analysis.
+
