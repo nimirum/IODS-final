@@ -222,6 +222,34 @@ g1 + geom_boxplot() + ggtitle(&quot;Students gender and exam points&quot;)</code
 <p>Hypothesis: people with high points in exam have high attitude towards statistics</p>
 <p>Hypothesis 2: age and gender is related to high points in exam</p>
 <p>I’m going to test with logistic regression that are my hypotesis possible to predict from the data or not.</p>
+<pre class="r"><code>model &lt;- glm(high_points ~ gender+ attitude + age -1,  data = lrn14, family = &quot;binomial&quot;)
+summary(model)</code></pre>
+<pre><code>## 
+## Call:
+## glm(formula = high_points ~ gender + attitude + age - 1, family = &quot;binomial&quot;, 
+##     data = lrn14)
+## 
+## Deviance Residuals: 
+##     Min       1Q   Median       3Q      Max  
+## -1.7548  -0.8115  -0.5259   0.9753   2.4184  
+## 
+## Coefficients:
+##          Estimate Std. Error z value Pr(&gt;|z|)    
+## genderF  -4.91061    1.17115  -4.193 2.75e-05 ***
+## genderM  -5.07099    1.29661  -3.911 9.19e-05 ***
+## attitude  0.14182    0.03025   4.689 2.75e-06 ***
+## age      -0.02173    0.02420  -0.898    0.369    
+## ---
+## Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
+## 
+## (Dispersion parameter for binomial family taken to be 1)
+## 
+##     Null deviance: 253.69  on 183  degrees of freedom
+## Residual deviance: 189.73  on 179  degrees of freedom
+## AIC: 197.73
+## 
+## Number of Fisher Scoring iterations: 4</code></pre>
+<p>The students with high attitude points seem to correlate with high exam points and gender because the coefficents are ***. I drop age variable and do the model again.</p>
 <pre class="r"><code>model &lt;- glm(high_points ~ gender+ attitude -1,  data = lrn14, family = &quot;binomial&quot;)
 summary(model)</code></pre>
 <pre><code>## 
@@ -248,7 +276,6 @@ summary(model)</code></pre>
 ## AIC: 196.58
 ## 
 ## Number of Fisher Scoring iterations: 4</code></pre>
-<p>The students with high attitude points seem to correlate with high exam points because the coefficents are ***.</p>
 <pre class="r"><code>OR &lt;- coef(model) %&gt;% exp
 CI &lt;- confint(model) %&gt;% exp</code></pre>
 <pre><code>## Waiting for profiling to be done...</code></pre>

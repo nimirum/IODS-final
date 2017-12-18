@@ -107,11 +107,16 @@ Hypothesis 2: age and gender is related to high points in exam
 I'm going to test with logistic regression that are my hypotesis possible to predict from the data or not.
 
 ```{r}
-model <- glm(high_points ~ gender+ attitude -1,  data = lrn14, family = "binomial")
+model <- glm(high_points ~ gender+ attitude + age -1,  data = lrn14, family = "binomial")
 summary(model)
 ```
 
-The students with high attitude points seem to correlate with high exam points because the coefficents are ***. 
+The students with high attitude points seem to correlate with high exam points and gender because the coefficents are ***. I drop age variable and do the model again.
+
+```{r}
+model <- glm(high_points ~ gender+ attitude -1,  data = lrn14, family = "binomial")
+summary(model)
+```
 
 ```{r}
 OR <- coef(model) %>% exp
